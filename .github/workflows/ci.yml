@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_FROM_API: 1
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tap this checkout
+        run: |
+          tap="$(brew --repository)/Library/Taps/maheshoo7/homebrew-tap"
+          mkdir -p "$(dirname "$tap")"
+          ln -s "$GITHUB_WORKSPACE" "$tap"
+
+      - name: brew style
+        run: brew style maheshoo7/tap
+
+      - name: brew audit
+        run: brew audit --cask --strict --online maheshoo7/tap/clippad

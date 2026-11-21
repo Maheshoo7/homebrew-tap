@@ -1,0 +1,57 @@
+name: Update ClipPad
+
+# Checks for a new published ClipPad release and bumps the cask to it.
+# Needs no secrets: the release is public and the commit goes to this repo.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-clippad
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Bump cask if a new release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CASK: Casks/clippad.rb
+          UPSTREAM: Maheshoo7/clippad
+        run: |
+          set -euo pipefail
+          tag=$(gh api "repos/$UPSTREAM/releases/latest" --jq .tag_name)
+          new=${tag#v}
+          current=$(sed -nE 's/^  version "([^"]+)"/\1/p' "$CASK")
+          echo "current=$current latest=$new"
+          if [ "$new" = "$current" ]; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          sum() {
+            curl -fsSL --retry 3 \
+              "https://github.com/$UPSTREAM/releases/download/$tag/ClipPad_${new}_$1.dmg" \
+              | sha256sum | cut -d' ' -f1
+          }
+          arm=$(sum aarch64)
+          intel=$(sum x64)
+
+          sed -i -E \
+            -e "s/^(  version \")[^\"]+\"/\1${new}\"/" \
+            -e "s/(arm: +\")[0-9a-f]{64}/\1${arm}/" \
+            -e "s/(intel: +\")[0-9a-f]{64}/\1${intel}/" \
+            "$CASK"
+          git diff
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "clippad ${new}"
+          git push

@@ -15,6 +15,8 @@ cask "clippad" do
     strategy :github_latest
   end
 
+  depends_on :macos
+
   app "ClipPad.app"
 
   uninstall quit: "io.github.maheshoo7.clippad"

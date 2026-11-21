@@ -14,7 +14,6 @@ jobs:
     runs-on: macos-latest
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
-      HOMEBREW_NO_INSTALL_FROM_API: 1
     steps:
       - uses: actions/checkout@v5
 
@@ -23,6 +22,8 @@ jobs:
           tap="$(brew --repository)/Library/Taps/maheshoo7/homebrew-tap"
           mkdir -p "$(dirname "$tap")"
           ln -s "$GITHUB_WORKSPACE" "$tap"
+          # Homebrew 6+ only loads non-official taps you've explicitly trusted
+          brew trust maheshoo7/tap
 
       - name: brew style
         run: brew style maheshoo7/tap
